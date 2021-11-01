@@ -1,1 +1,0 @@
-ld: warning: libXrandr.so.3, needed by /usr/X11R7/lib/libXft.so, may conflict with libXrandr.so.2
