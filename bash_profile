@@ -518,3 +518,6 @@ export PATH
 # Configure the shell to load .shrc at startup time.
 # This will happen for every shell started, not just login shells.
 #export ENV=$HOME/.shrc
+
+# nushell
+#nu

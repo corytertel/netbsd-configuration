@@ -24,6 +24,12 @@ import XMonad.Hooks.EwmhDesktops (ewmh, fullscreenEventHook)
 import XMonad.Layout.MultiToggle.Instances (StdTransformers (NBFULL))
 import XMonad.Layout.MultiToggle (mkToggle, single, Toggle (..))
 import XMonad.Layout.NoBorders (noBorders, smartBorders)
+import XMonad.Layout.TwoPane
+import XMonad.Layout.ResizableTile
+import XMonad.Layout.BinarySpacePartition
+import XMonad.Layout.Dwindle
+import XMonad.Util.NamedScratchpad
+--import XMonad.Actions.Volume
 
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
@@ -44,7 +50,7 @@ myClickJustFocuses = False
 
 -- Width of the window border in pixels.
 --
-myBorderWidth   = 2
+myBorderWidth   = 4
 
 -- modMask lets you specify which modkey you want to use. The default
 -- is mod1Mask ("left alt").  You may also consider using mod3Mask
@@ -62,7 +68,6 @@ myModMask       = mod4Mask
 --
 -- > workspaces = ["web", "irc", "code" ] ++ map show [4..9]
 --
---myWorkspaces    = [" \61728  ", " \62057  ", " \62074  ", " \61729  ", " \61564  ", " \61878  ", " \61441  ", " \61704  ", " \61612  "]
 myWorkspaces    =   [ "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
 -- Border colors for unfocused and focused windows, respectively.
@@ -88,12 +93,13 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
      -- Rotate through the available layout algorithms
     --, ((modm,               xK_space ), sendMessage NextLayout)
     , ((modm,               xK_backslash ), sendMessage NextLayout)
+    , ((modm .|. shiftMask, xK_backslash ), sendMessage FirstLayout)
 
     --  Reset the layouts on the current workspace to default
     , ((modm .|. shiftMask, xK_space ), setLayout $ XMonad.layoutHook conf)
 
     -- Resize viewed windows to the correct size
-    , ((modm,               xK_n     ), refresh)
+    --, ((modm,               xK_n     ), refresh)
 
     -- Move focus to the next window
     , ((modm,               xK_Tab   ), windows W.focusDown)
@@ -159,7 +165,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((0                 , xF86XK_MonBrightnessDown), spawn "xbrightness -5000")
 
     -- Keyboard Layout
-    , ((0                 , xK_Alt_R), spawn "/home/cory/.nix-configuration/shared/users/cory/apps/layout_switch/layout_switch.sh")
+    , ((0                 , xK_Alt_R), spawn "/home/cory/.nix-configuration/shared/apps/layout_switch/layout_switch.sh")
 
     -- Kill App
     , ((modm              , xK_Escape), spawn "xkill")
@@ -173,6 +179,14 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
     -- Fullscreen
     , ((modm              , xK_f), sendMessage (Toggle NBFULL))
+
+    -- Resize resizableTall
+    , ((modm              , xK_m), sendMessage MirrorExpand)
+    , ((modm              , xK_n), sendMessage MirrorShrink)
+
+    -- Scratchpads
+    , ((modm              , xK_apostrophe), namedScratchpadAction myScratchpads "terminal")
+    , ((0                 , xF86XK_AudioPlay), namedScratchpadAction myScratchpads "cmus")
     ]
     ++
 
@@ -225,16 +239,20 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
 -- which denotes layout choice.
 --
 myLayout = fullScreenToggle $ smartBorders $
-           (bigGaps   $ avoidStruts (tiled))
-       ||| (smallGaps $ avoidStruts (tiled))
-       ||| (smallGaps $ avoidStruts (threeColumnMid))
+           (bigGaps   $ avoidStruts (resizableTile))
+       ||| (smallGaps   $ avoidStruts (resizableTile))
+       ||| (smallGaps $ avoidStruts (twoPane))
        ||| (paperGaps $ avoidStruts (Full))
-       ||| (musicGaps $ avoidStruts (Mirror tiled))
+       ||| (musicGaps $ avoidStruts (Mirror resizableTile))
   where
      -- default tiling algorithm partitions the screen into two panes
      tiled   = Tall nmaster delta ratio
      threeColumn = ThreeCol nmaster delta ratio
      threeColumnMid = ThreeColMid nmaster delta ratio
+     twoPane = TwoPane (3/100) (1/2)
+     resizableTile = ResizableTall 1 (3/100) (1/2) []
+     binarySpacePartition = emptyBSP
+     --dwindle = Dwindle 1 (3/100) (1/2)
 
      -- The default number of windows in the master pane
      nmaster = 1
@@ -250,15 +268,15 @@ myLayout = fullScreenToggle $ smartBorders $
 
      -- Spacing
      -- 4k
-     --bigGaps   = spacingRaw False (Border 100 46 230 176)   True (Border 0 54 0 54) True
-     --smallGaps = spacingRaw False (Border 54 0 54 0)        True (Border 0 54 0 54) True
-     --paperGaps = spacingRaw False (Border 150 96 1050 996)  True (Border 0 54 0 54) True
-     --musicGaps = spacingRaw False (Border 300 244 860 806)  True (Border 0 54 0 54) True
+     --bigGaps   = spacingRaw False (Border 100 85 230 215)    True (Border 0 15 0 15) True
+     --smallGaps = spacingRaw False (Border 50 35 50 35)       True (Border 0 15 0 15) True
+     --paperGaps = spacingRaw False (Border 150 135 1050 1035) True (Border 0 15 0 15) True
+     --musicGaps = spacingRaw False (Border 300 285 860 845)   True (Border 0 15 0 15) True
      -- 1080p
-     bigGaps   = spacingRaw False (Border 50 24 115 89)   True (Border 0 26 0 26) True
-     smallGaps = spacingRaw False (Border 26 0 26 0)        True (Border 0 26 0 26) True
-     paperGaps = spacingRaw False (Border 75 49 525 499)  True (Border 0 26 0 26) True
-     musicGaps = spacingRaw False (Border 150 124 430 404)  True (Border 0 26 0 26) True
+     bigGaps   = spacingRaw False (Border 50 42 115 107)   True (Border 0 8 0 8) True
+     smallGaps = spacingRaw False (Border 25 17 25 17)     True (Border 0 8 0 8) True
+     paperGaps = spacingRaw False (Border 75 67 525 517)   True (Border 0 8 0 8) True
+     musicGaps = spacingRaw False (Border 150 142 430 422) True (Border 0 8 0 8) True
 
 ------------------------------------------------------------------------
 -- Window rules:
@@ -295,7 +313,7 @@ myManageHook = composeAll
     , resource  =? "desktop_window"                                   --> doIgnore
     , resource  =? "kdesktop"                                         --> doIgnore
     , isFullscreen                                                    --> doFullFloat
-    ]
+    ] <+> namedScratchpadManageHook myScratchpads
   where
     unfloat = ask >>= doF . W.sink
     myRectFloat = doRectFloat (W.RationalRect (1 % 4) (1 % 4) (1 % 2) (1 % 2))
@@ -322,7 +340,7 @@ myLogHook = return ()
 ------------------------------------------------------------------------
 -- Startup hook
 
--- Perform an arbitrary action each time xmonad starts or is restarted
+  -- Perform an arbitrary action each time xmonad starts or is restarted
 -- with mod-q.  Used by, e.g., XMonad.Layout.PerWorkspace to initialize
 -- per-workspace layout choices.
 --
@@ -351,6 +369,19 @@ myPP2 = xmobarPP { ppOrder = \(_:_:_:_) -> [] }
 
 -- Key binding to toggle the gap from the bar.
 toggleStrutsKey XConfig {XMonad.modMask = modMask} = (modMask, xK_b)
+
+------------------------------------------------------------------------
+-- Scratchpads
+myScratchpads = [ NS "terminal" spawnTerm findTerm manageTerm
+                , NS "cmus" spawnCmus findCmus manageCmus
+                ]
+  where
+    spawnTerm  = myTerminal ++ " --name=scratchpad"
+    findTerm   = resource =? "scratchpad"
+    manageTerm = customFloating $ W.RationalRect (1 % 4) (1 % 4) (1 % 2) (1 % 2)
+    spawnCmus  = myTerminal ++ " --name=cmus 'cmus'"
+    findCmus   = resource =? "cmus"
+    manageCmus = customFloating $ W.RationalRect (1 % 4) (1 % 4) (1 % 2) (1 % 2)
 
 ------------------------------------------------------------------------
 -- Now run xmonad with all the defaults we set up.
